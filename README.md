@@ -1,58 +1,33 @@
-# Welcome to Loco :train:
+# Start
 
-[Loco](https://loco.rs) is a web and API framework running on Rust.
+`git checkout axum-tracing-opentelemetry`
 
-This is the **SaaS starter** which includes a `User` model and authentication based on JWT.
-It also include configuration sections that help you pick either a frontend or a server-side template set up for your fullstack server.
-
-
-## Quick Start
-
-```sh
-cargo loco start
+```
+OTEL_SERVICE_NAME="loco_otel_integration_issue" \
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://localhost:4317" \
+OTEL_EXPORTER_OTLP_TRACES_PROTOCOL="grpc" \
+OTEL_TRACES_SAMPLER="always_on" \
+cargo run -- start
 ```
 
-```sh
-$ cargo loco start
-Finished dev [unoptimized + debuginfo] target(s) in 21.63s
-    Running `target/debug/myapp start`
+# API request
 
-    :
-    :
-    :
+`curl -s localhost:5150/_ping` and `curl -s localhost:5150/api`
 
-controller/app_routes.rs:203: [Middleware] Adding log trace id
+# Issue
 
-                      ▄     ▀
-                                 ▀  ▄
-                  ▄       ▀     ▄  ▄ ▄▀
-                                    ▄ ▀▄▄
-                        ▄     ▀    ▀  ▀▄▀█▄
-                                          ▀█▄
-▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄ ▀▀█
- ██████  █████   ███ █████   ███ █████   ███ ▀█
- ██████  █████   ███ █████   ▀▀▀ █████   ███ ▄█▄
- ██████  █████   ███ █████       █████   ███ ████▄
- ██████  █████   ███ █████   ▄▄▄ █████   ███ █████
- ██████  █████   ███  ████   ███ █████   ███ ████▀
-   ▀▀▀██▄ ▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀ ██▀
-       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-                https://loco.rs
+This is a tracking issue for `opentelemetry-appender-tracing` with `experimental_use_tracing_span_context` feature enabled
+when integrating with integrating `axum-tracing-opentelemetry`'s middlewares (`OtelAxumLayer` and `OtelAxumLayer`)
+to get more information from the request.
 
-environment: development
-   database: automigrate
-     logger: debug
-compilation: debug
-      modes: server
+Everything should work correctly without with the default setup. Logs exported have `trace_id`, and they can be used
+to correlate logs & traces.
 
-listening on http://localhost:5150
-```
+When `axum_tracing_opentelemetry::middleware::OtelAxumLayer` is added to the middleware layers
+(by uncommenting it in `src/initializers/opentelemetry.rs`), we do get more information from the request and response,
+however `trace_id` is no longer exported.
 
-## Full Stack Serving
+# Possible causes
 
-You can check your [configuration](config/development.yaml) to pick either frontend setup or server-side rendered template, and activate the relevant configuration sections.
-
-
-## Getting help
-
-Check out [a quick tour](https://loco.rs/docs/getting-started/tour/) or [the complete guide](https://loco.rs/docs/getting-started/guide/).
+I do not think there is a problem with `opentelemetry-appender-tracing`, rather it likely has something to do with
+[`tracing-opentelemetry-instrumentation-sdk` creating a new span and setting `trace_id` to `tracing::field::Empty`](https://github.com/davidB/tracing-opentelemetry-instrumentation-sdk/blob/main/tracing-opentelemetry-instrumentation-sdk/src/http/http_server.rs#L8)
