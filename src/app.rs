@@ -1,17 +1,18 @@
 use async_trait::async_trait;
 use loco_rs::{
+    Result,
     app::{AppContext, Hooks, Initializer},
     bgworker::Queue,
-    boot::{create_app, BootResult, StartMode},
+    boot::{BootResult, StartMode, create_app},
     config::Config,
     controller::AppRoutes,
     environment::Environment,
     task::Tasks,
-    Result,
+    // controller::middleware::MiddlewareLayer,
 };
 
 #[allow(unused_imports)]
-use crate::{controllers, tasks};
+use crate::{controllers, initializers, tasks};
 
 pub struct App;
 #[async_trait]
@@ -39,8 +40,15 @@ impl Hooks for App {
     }
 
     async fn initializers(_ctx: &AppContext) -> Result<Vec<Box<dyn Initializer>>> {
-        Ok(vec![])
+        Ok(vec![Box::new(
+            initializers::opentelemetry::OpenTelemetryInitializer,
+        )])
     }
+
+    // uncomment to disable all middlewares if needed
+    // fn middlewares(_ctx: &AppContext) -> Vec<Box<dyn MiddlewareLayer>> {
+    //     vec![]
+    // }
 
     fn init_logger(_config: &Config, _env: &Environment) -> Result<bool> {
         // default logger is not compatible with opentelemetry logger
